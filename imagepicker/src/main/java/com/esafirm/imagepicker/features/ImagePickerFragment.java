@@ -20,13 +20,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.view.ContextThemeWrapper;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.esafirm.imagepicker.R;
 import com.esafirm.imagepicker.features.camera.CameraHelper;
 import com.esafirm.imagepicker.features.camera.DefaultCameraModule;
@@ -44,6 +37,13 @@ import com.esafirm.imagepicker.view.SnackBarView;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.view.ContextThemeWrapper;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.RecyclerView;
 
 import static android.app.Activity.RESULT_CANCELED;
 import static android.app.Activity.RESULT_OK;
@@ -180,6 +180,14 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
         emptyTextView = rootView.findViewById(R.id.tv_empty_images);
         recyclerView = rootView.findViewById(R.id.recyclerView);
         snackBarView = rootView.findViewById(R.id.ef_snackbar);
+    }
+
+    private void teardownView() {
+        progressBar = null;
+        emptyTextView = null;
+        recyclerView = null;
+        snackBarView = null;
+        recyclerViewManager = null;
     }
 
     private void setupRecyclerView(ImagePickerConfig config, ArrayList<Image> selectedImages) {
@@ -465,13 +473,18 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
 
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    public void onDestroyView() {
+        super.onDestroyView();
+        teardownView();
         if (presenter != null) {
             presenter.abortLoad();
             presenter.detachView();
         }
+    }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
         if (observer != null) {
             getActivity().getContentResolver().unregisterContentObserver(observer);
             observer = null;
