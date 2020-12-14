@@ -78,6 +78,8 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
 
     private boolean isCameraOnly;
 
+    private final Bundle savedInstanceState = new Bundle();
+
 
     public ImagePickerFragment() {
         // Required empty public constructor.
@@ -143,6 +145,9 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) {
+            this.savedInstanceState.putAll(savedInstanceState);
+        }
         isCameraOnly = getArguments().containsKey(CameraOnlyConfig.class.getSimpleName());
         startContentObserver();
     }
@@ -183,6 +188,7 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
     }
 
     private void teardownView() {
+        onSaveInstanceState(savedInstanceState);
         progressBar = null;
         emptyTextView = null;
         recyclerView = null;
@@ -226,13 +232,17 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putSerializable(STATE_KEY_CAMERA_MODULE, presenter.getCameraModule());
+        if (outState == savedInstanceState) {
+            outState.putSerializable(STATE_KEY_CAMERA_MODULE, presenter.getCameraModule());
 
-        if (!isCameraOnly) {
-            outState.putParcelable(STATE_KEY_RECYCLER, recyclerViewManager.getRecyclerState());
-            outState.putParcelableArrayList(STATE_KEY_SELECTED_IMAGES, (ArrayList<? extends Parcelable>)
-                    recyclerViewManager.getSelectedImages());
+            if (!isCameraOnly) {
+                outState.putParcelable(STATE_KEY_RECYCLER, recyclerViewManager.getRecyclerState());
+                outState.putParcelableArrayList(STATE_KEY_SELECTED_IMAGES, (ArrayList<? extends Parcelable>)
+                        recyclerViewManager.getSelectedImages());
+            }
+        } else {
+            outState.putAll(savedInstanceState);
+            super.onSaveInstanceState(outState);
         }
     }
 
