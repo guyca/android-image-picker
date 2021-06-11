@@ -23,7 +23,7 @@ class MainFragment : Fragment() {
         button_pick_fragment.setOnClickListener {
             ImagePicker.create(this@MainFragment)
                 .returnMode(ReturnMode.ALL) // set whether pick action or camera action should return immediate result or not. Only works in single mode for image picker
-                .folderMode(true) // set folder mode (false by default)
+                .folderMode(false) // set folder mode (false by default)
                 .single()
                 .toolbarFolderTitle("Folder") // folder selection title
                 .toolbarImageTitle("Tap to select")
