@@ -3,9 +3,8 @@ package com.esafirm.imagepicker.features.fileloader;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.MediaStore;
-
-import androidx.annotation.Nullable;
 
 import com.esafirm.imagepicker.features.common.ImageLoaderListener;
 import com.esafirm.imagepicker.helper.ImagePickerUtils;
@@ -20,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import androidx.annotation.Nullable;
 
 public class DefaultImageFileLoader implements ImageFileLoader {
 
@@ -116,13 +117,22 @@ public class DefaultImageFileLoader implements ImageFileLoader {
             if (onlyVideo || includeVideo) {
                 return MediaStore.Files.getContentUri("external");
             }
-            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                return MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+            } else {
+                return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+            }
         }
 
         @Override
         public void run() {
-            Cursor cursor = context.getContentResolver().query(getSourceUri(), projection,
-                    getQuerySelection(), null, MediaStore.Images.Media.DATE_ADDED);
+            Cursor cursor = context.getContentResolver().query(
+                    getSourceUri(),
+                    projection,
+                    getQuerySelection(),
+                    null,
+                    MediaStore.Images.Media.DATE_ADDED
+            );
 
             if (cursor == null) {
                 listener.onFailed(new NullPointerException());

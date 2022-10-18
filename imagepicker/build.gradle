@@ -6,9 +6,9 @@ apply plugin: 'com.github.dcendents.android-maven'
 android {
 //    final sdk = rootProject.ext.sdk
     final sdk = [
-            compileSdk: 29,
-            targetSdk : 29,
-            minSdk    : 14
+            compileSdk: 33,
+            targetSdk : 33,
+            minSdk    : 24
     ]
 
     compileSdkVersion sdk.compileSdk

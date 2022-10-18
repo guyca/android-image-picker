@@ -40,6 +40,7 @@ import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
@@ -47,7 +48,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import static android.app.Activity.RESULT_CANCELED;
 import static android.app.Activity.RESULT_OK;
-import static com.esafirm.imagepicker.helper.ImagePickerPreferences.PREF_WRITE_EXTERNAL_STORAGE_REQUESTED;
+import static com.esafirm.imagepicker.helper.ImagePickerPreferences.PREF_READ_EXTERNAL_STORAGE_REQUESTED;
+import static com.esafirm.imagepicker.helper.ImagePickerPreferences.PREF_READ_MEDIA_IMAGES;
 
 public class ImagePickerFragment extends Fragment implements ImagePickerView {
     private static final String STATE_KEY_CAMERA_MODULE = "Key.CameraModule";
@@ -56,8 +58,9 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
 
     private static final int RC_CAPTURE = 2000;
 
-    private static final int RC_PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE = 23;
+    private static final int RC_PERMISSION_REQUEST_READ_EXTERNAL_STORAGE = 23;
     private static final int RC_PERMISSION_REQUEST_CAMERA = 24;
+    private static final int RC_PERMISSION_REQUEST_READ_MEDIA_IMAGES = 25;
 
     private IpLogger logger = IpLogger.getInstance();
 
@@ -85,8 +88,9 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
         // Required empty public constructor.
     }
 
-    public static ImagePickerFragment newInstance(@Nullable ImagePickerConfig config,
-                                                  @Nullable CameraOnlyConfig cameraOnlyConfig) {
+    public static ImagePickerFragment newInstance(
+            @Nullable ImagePickerConfig config,
+            @Nullable CameraOnlyConfig cameraOnlyConfig) {
         ImagePickerFragment fragment = new ImagePickerFragment();
         Bundle args = new Bundle();
         if (config != null) {
@@ -290,11 +294,18 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
      * Check permission
      */
     private void getDataWithPermission() {
-        int rc = ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        if (rc == PackageManager.PERMISSION_GRANTED) {
+        if (isReadImagesPermissionGranted()) {
             getData();
         } else {
-            requestWriteExternalPermission();
+            requestReadExternalPermission();
+        }
+    }
+
+    private boolean isReadImagesPermissionGranted() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
         }
     }
 
@@ -306,23 +317,50 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
         }
     }
 
+    private void requestReadExternalPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestReadExternalPermissionApi33();
+        } else {
+            requestReadExternalPermissionMaxApi32();
+        }
+    }
+
     /**
      * Request for permission
      * If permission denied or app is first launched, request for permission
      * If permission denied and user choose 'Never Ask Again', show snackbar with an action that navigate to app settings
      */
-    private void requestWriteExternalPermission() {
+    private void requestReadExternalPermissionMaxApi32() {
         logger.w("Write External permission is not granted. Requesting permission");
 
-        final String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        final String[] permissions = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
 
-        if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            requestPermissions(permissions, RC_PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
+        if (ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            requestPermissions(permissions, RC_PERMISSION_REQUEST_READ_EXTERNAL_STORAGE);
         } else {
-            final String permission = PREF_WRITE_EXTERNAL_STORAGE_REQUESTED;
+            final String permission = PREF_READ_EXTERNAL_STORAGE_REQUESTED;
             if (!preferences.isPermissionRequested(permission)) {
                 preferences.setPermissionRequested(permission);
-                requestPermissions(permissions, RC_PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
+                requestPermissions(permissions, RC_PERMISSION_REQUEST_READ_EXTERNAL_STORAGE);
+            } else {
+                snackBarView.show(R.string.ef_msg_no_write_external_permission, v -> openAppSettings());
+            }
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    private void requestReadExternalPermissionApi33() {
+        logger.w("Write External permission is not granted. Requesting permission");
+
+        final String[] permissions = new String[]{Manifest.permission.READ_MEDIA_IMAGES};
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), Manifest.permission.READ_MEDIA_IMAGES)) {
+            requestPermissions(permissions, RC_PERMISSION_REQUEST_READ_MEDIA_IMAGES);
+        } else {
+            final String permission = PREF_READ_MEDIA_IMAGES;
+            if (!preferences.isPermissionRequested(permission)) {
+                preferences.setPermissionRequested(permission);
+                requestPermissions(permissions, RC_PERMISSION_REQUEST_READ_MEDIA_IMAGES);
             } else {
                 snackBarView.show(R.string.ef_msg_no_write_external_permission, v -> openAppSettings());
             }
@@ -334,11 +372,11 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
 
         ArrayList<String> permissions = new ArrayList<>(2);
 
-        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             permissions.add(Manifest.permission.CAMERA);
         }
-        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         }
 
         if (checkForRationale(permissions)) {
@@ -375,14 +413,14 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
-            case RC_PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE: {
+            case RC_PERMISSION_REQUEST_READ_EXTERNAL_STORAGE: {
                 if (grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     logger.d("Write External permission granted");
                     getData();
                     return;
                 }
                 logger.e("Permission not granted: results len = " + grantResults.length +
-                        " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
+                         " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
                 interactionListener.cancel();
             }
             break;
@@ -393,7 +431,7 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
                     return;
                 }
                 logger.e("Permission not granted: results len = " + grantResults.length +
-                        " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
+                         " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
                 interactionListener.cancel();
                 break;
             }
@@ -438,9 +476,11 @@ public class ImagePickerFragment extends Fragment implements ImagePickerView {
     public void captureImageWithPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             final boolean isCameraGranted = ActivityCompat
-                    .checkSelfPermission(getActivity(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+                                                    .checkSelfPermission(getActivity(), Manifest.permission.CAMERA) ==
+                                            PackageManager.PERMISSION_GRANTED;
             final boolean isWriteGranted = ActivityCompat
-                    .checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+                                                   .checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                                           PackageManager.PERMISSION_GRANTED;
             if (isCameraGranted && isWriteGranted) {
                 captureImage();
             } else {
