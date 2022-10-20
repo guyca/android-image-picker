@@ -42,7 +42,7 @@ class SnackBarView @JvmOverloads constructor(
 
     fun setOnActionClickListener(@StringRes textId: Int, onClickListener: OnClickListener) {
         val mTextId = if (textId == 0) R.string.ef_ok else textId
-        btnAction?.let {
+        btnAction?.apply {
             setText(mTextId)
             setOnClickListener { v: View? -> hide { onClickListener.onClick(v) } }
         }
